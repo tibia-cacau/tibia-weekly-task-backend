@@ -1,0 +1,18 @@
+# Example `render.yaml` for deploying the backend on Render using Docker.
+# This file is optional — you can also create the service from the Render dashboard.
+# Adjust `repo`, `branch`, `envVars` and `plan` according to your needs.
+services:
+  - type: web
+    name: tibia-weekly-task-backend
+    env: docker
+    region: oregon
+    plan: free
+    branch: main
+    repo: https://github.com/tibia-cacau/tibia-weekly-task-backend.git
+    dockerfilePath: Dockerfile
+    # You can set environment variables in the Render dashboard; sample keys below
+    envVars:
+      - key: MONGODB_URI
+        value: ""
+      - key: SPRING_PROFILES_ACTIVE
+        value: "local"
