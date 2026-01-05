@@ -1,11 +1,10 @@
 package com.tibia.weeklytasks.model;
 
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
 
@@ -13,21 +12,23 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Document(collection = "task_recommendations")
+@Entity
+@Table(name = "task_recommendations")
 public class TaskRecommendation {
 
     @Id
-    private String id;
-    
-    private String taskId;
-    
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private Long taskId;
+
     private Integer playerLevel;
-    
+
     private String vocation;
-    
+
     private Double score; // Recommendation score based on various factors
-    
+
     private String reason; // Why this task is recommended
-    
+
     private LocalDateTime createdAt;
 }

@@ -5,13 +5,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class TibiaCoinPriceResponse {
     @JsonProperty("price")
     private String price;
-    
+
     @JsonProperty("quantity")
     private Integer quantity;
-    
+
     @JsonProperty("priceNumeric")
     private Double priceNumeric;
-    
+
     @JsonProperty("total")
     private Double total;
 

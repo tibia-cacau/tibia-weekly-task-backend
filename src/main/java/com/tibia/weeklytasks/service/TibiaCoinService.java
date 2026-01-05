@@ -11,6 +11,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 @Service
 public class TibiaCoinService {
 
+    private static final int MIN_QUANTITY = 50;
     private static final int MAX_QUANTITY = 10000;
 
     @Value("${reidoscoins.api.url:https://www.reidoscoins.com.br/index.php}")
@@ -32,11 +33,15 @@ public class TibiaCoinService {
         if (quantity == null || quantity <= 0) {
             throw new IllegalArgumentException("Quantidade deve ser maior que zero");
         }
-        
+
+        if (quantity < MIN_QUANTITY) {
+            throw new IllegalArgumentException("Quantidade mínima permitida é " + MIN_QUANTITY);
+        }
+
         if (quantity > MAX_QUANTITY) {
             throw new IllegalArgumentException("Quantidade máxima permitida é " + MAX_QUANTITY);
         }
-        
+
         // Construir URL com parâmetros
         String url = UriComponentsBuilder.fromHttpUrl(apiUrl)
                 .queryParam("route", "product/product/code_price_tibia")
@@ -48,30 +53,34 @@ public class TibiaCoinService {
             // Fazer requisição GET para API do Rei dos Coins como String
             ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
             String responseBody = response.getBody();
-            
+
             if (responseBody == null || responseBody.trim().isEmpty()) {
                 throw new RuntimeException("Resposta vazia da API do Rei dos Coins");
             }
-            
+
             // Verificar se a resposta contém mensagens de erro conhecidas
             if (responseBody.contains("Quantidade máxima")) {
                 throw new IllegalArgumentException("Quantidade excede o limite permitido pela API: " + responseBody);
             }
-            
+
+            if (responseBody.contains("Quantidade mínima")) {
+                throw new IllegalArgumentException("Quantidade abaixo do limite permitido pela API: " + responseBody);
+            }
+
             // Verificar se parece ser JSON (começa com { ou [)
             String trimmedBody = responseBody.trim();
             if (!trimmedBody.startsWith("{") && !trimmedBody.startsWith("[")) {
                 throw new RuntimeException("Resposta da API não é um JSON válido: " + responseBody);
             }
-            
+
             // Tentar fazer parse do JSON
             TibiaCoinPriceResponse priceResponse = objectMapper.readValue(responseBody, TibiaCoinPriceResponse.class);
-            
+
             // Calcular total se não vier da API
             if (priceResponse != null && priceResponse.getTotal() == null && priceResponse.getPriceNumeric() != null) {
                 priceResponse.setTotal(priceResponse.getPriceNumeric() * quantity);
             }
-            
+
             return priceResponse;
         } catch (IllegalArgumentException e) {
             // Re-lançar erros de validação

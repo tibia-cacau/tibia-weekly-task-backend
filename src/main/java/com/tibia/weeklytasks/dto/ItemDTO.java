@@ -15,7 +15,7 @@ import java.util.List;
 @AllArgsConstructor
 public class ItemDTO {
 
-    private String id;
+    private Long id;
 
     @NotBlank(message = "Nome do item é obrigatório")
     private String name;
@@ -29,4 +29,3 @@ public class ItemDTO {
     @NotNull(message = "Preço é obrigatório")
     private Integer priceAtNpc;
 }
-

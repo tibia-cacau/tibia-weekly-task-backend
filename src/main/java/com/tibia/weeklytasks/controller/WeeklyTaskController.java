@@ -27,7 +27,7 @@ public class WeeklyTaskController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<WeeklyTask> getTaskById(@PathVariable String id) {
+    public ResponseEntity<WeeklyTask> getTaskById(@PathVariable Long id) {
         log.info("GET /api/tasks/{} - Fetching task", id);
         return taskService.getTaskById(id)
                 .map(ResponseEntity::ok)
@@ -55,7 +55,7 @@ public class WeeklyTaskController {
 
     @PutMapping("/{id}")
     public ResponseEntity<WeeklyTask> updateTask(
-            @PathVariable String id,
+            @PathVariable Long id,
             @Valid @RequestBody WeeklyTaskRequest request) {
         log.info("PUT /api/tasks/{} - Updating task", id);
         try {
@@ -67,7 +67,7 @@ public class WeeklyTaskController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteTask(@PathVariable String id) {
+    public ResponseEntity<Void> deleteTask(@PathVariable Long id) {
         log.info("DELETE /api/tasks/{} - Deleting task", id);
         taskService.deleteTask(id);
         return ResponseEntity.noContent().build();

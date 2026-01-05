@@ -23,14 +23,14 @@ public class WeeklyTaskService {
         return taskRepository.findAll();
     }
 
-    public Optional<WeeklyTask> getTaskById(String id) {
+    public Optional<WeeklyTask> getTaskById(Long id) {
         log.debug("Fetching task with id: {}", id);
         return taskRepository.findById(id);
     }
 
     public WeeklyTask createTask(WeeklyTaskRequest request) {
         log.debug("Creating new task: {}", request.getName());
-        
+
         WeeklyTask task = WeeklyTask.builder()
                 .taskType(request.getTaskType())
                 .name(request.getName())
@@ -52,9 +52,9 @@ public class WeeklyTaskService {
         return taskRepository.save(task);
     }
 
-    public WeeklyTask updateTask(String id, WeeklyTaskRequest request) {
+    public WeeklyTask updateTask(Long id, WeeklyTaskRequest request) {
         log.debug("Updating task with id: {}", id);
-        
+
         WeeklyTask task = taskRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Task not found with id: " + id));
 
@@ -76,7 +76,7 @@ public class WeeklyTaskService {
         return taskRepository.save(task);
     }
 
-    public void deleteTask(String id) {
+    public void deleteTask(Long id) {
         log.debug("Deleting task with id: {}", id);
         taskRepository.deleteById(id);
     }

@@ -74,11 +74,17 @@ public class ItemController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "30") int size,
             @RequestParam(defaultValue = "name") String sortBy,
-            @RequestParam(defaultValue = "ASC") String sortDirection) {
+            @RequestParam(defaultValue = "ASC") String sortDirection,
+            @RequestParam(required = false) String sellToNpc) {
         Sort.Direction direction = sortDirection.equalsIgnoreCase("DESC") ? Sort.Direction.DESC : Sort.Direction.ASC;
         Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
 
-        Page<Item> itemPage = itemRepository.findAll(pageable);
+        Page<Item> itemPage;
+        if (sellToNpc != null && !sellToNpc.isEmpty()) {
+            itemPage = itemRepository.findBySellTo(sellToNpc, pageable);
+        } else {
+            itemPage = itemRepository.findAll(pageable);
+        }
 
         List<ItemDTO> itemDTOs = itemPage.getContent()
                 .stream()
@@ -102,9 +108,16 @@ public class ItemController {
     public ResponseEntity<PageResponseDTO<ItemDTO>> searchItems(
             @RequestParam String name,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "30") int size) {
+            @RequestParam(defaultValue = "30") int size,
+            @RequestParam(required = false) String sellToNpc) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "name"));
-        Page<Item> itemPage = itemRepository.findByNameContaining(name, pageable);
+
+        Page<Item> itemPage;
+        if (sellToNpc != null && !sellToNpc.isEmpty()) {
+            itemPage = itemRepository.findByNameContainingAndSellTo(name, sellToNpc, pageable);
+        } else {
+            itemPage = itemRepository.findByNameContaining(name, pageable);
+        }
 
         List<ItemDTO> itemDTOs = itemPage.getContent()
                 .stream()
@@ -125,7 +138,7 @@ public class ItemController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ItemDTO> getItemById(@PathVariable String id) {
+    public ResponseEntity<ItemDTO> getItemById(@PathVariable Long id) {
         return itemRepository.findById(id)
                 .map(itemMapper::toDTO)
                 .map(ResponseEntity::ok)
@@ -157,7 +170,7 @@ public class ItemController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ItemDTO> updateItem(@PathVariable String id, @Valid @RequestBody ItemDTO itemDTO) {
+    public ResponseEntity<ItemDTO> updateItem(@PathVariable Long id, @Valid @RequestBody ItemDTO itemDTO) {
         log.info("Atualizando item: {}", id);
 
         return itemRepository.findById(id)
@@ -174,7 +187,7 @@ public class ItemController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteItem(@PathVariable String id) {
+    public ResponseEntity<Void> deleteItem(@PathVariable Long id) {
         if (!itemRepository.existsById(id)) {
             return ResponseEntity.notFound().build();
         }
