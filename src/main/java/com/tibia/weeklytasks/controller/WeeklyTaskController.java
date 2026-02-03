@@ -1,5 +1,7 @@
 package com.tibia.weeklytasks.controller;
 
+import com.tibia.weeklytasks.dto.SessionAnalyzerRequest;
+import com.tibia.weeklytasks.dto.SessionAnalyzerResponse;
 import com.tibia.weeklytasks.dto.WeeklyTaskRequest;
 import com.tibia.weeklytasks.model.WeeklyTask;
 import com.tibia.weeklytasks.service.WeeklyTaskService;
@@ -10,7 +12,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @RestController
@@ -71,5 +75,30 @@ public class WeeklyTaskController {
         log.info("DELETE /api/tasks/{} - Deleting task", id);
         taskService.deleteTask(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<List<WeeklyTask>> searchTasks(@RequestParam String q) {
+        log.info("GET /api/tasks/search?q={} - Searching tasks", q);
+        return ResponseEntity.ok(taskService.searchTasks(q));
+    }
+
+    @PostMapping("/analyze-session")
+    public ResponseEntity<SessionAnalyzerResponse> analyzeSession(
+            @Valid @RequestBody SessionAnalyzerRequest request) {
+        log.info("POST /api/tasks/analyze-session - Analyzing session with {} monsters and {} looted items",
+                request.getMonsterNames().size(),
+                request.getLootedItems() != null ? request.getLootedItems().size() : 0);
+
+        // Create a map to track kill counts (can be enhanced later to accept kill
+        // counts from frontend)
+        Map<String, Integer> killCounts = new HashMap<>();
+        request.getMonsterNames().forEach(name -> killCounts.put(name, 0));
+
+        SessionAnalyzerResponse response = taskService.analyzeSession(
+                request.getMonsterNames(),
+                killCounts,
+                request.getLootedItems());
+        return ResponseEntity.ok(response);
     }
 }

@@ -1,15 +1,18 @@
 package com.tibia.weeklytasks.service;
 
+import com.tibia.weeklytasks.dto.SessionAnalyzerResponse;
 import com.tibia.weeklytasks.dto.WeeklyTaskRequest;
+import com.tibia.weeklytasks.model.Monster;
 import com.tibia.weeklytasks.model.WeeklyTask;
+import com.tibia.weeklytasks.repository.MonsterRepository;
 import com.tibia.weeklytasks.repository.WeeklyTaskRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -17,6 +20,8 @@ import java.util.Optional;
 public class WeeklyTaskService {
 
     private final WeeklyTaskRepository taskRepository;
+    private final MonsterRepository monsterRepository;
+    private final com.tibia.weeklytasks.repository.ItemRepository itemRepository;
 
     public List<WeeklyTask> getAllTasks() {
         log.debug("Fetching all weekly tasks");
@@ -36,6 +41,7 @@ public class WeeklyTaskService {
                 .name(request.getName())
                 .itemName(request.getItemName())
                 .itemQuantity(request.getItemQuantity())
+                .imageUrl(request.getImageUrl())
                 .monsterName(request.getMonsterName())
                 .killCount(request.getKillCount())
                 .location(request.getLocation())
@@ -48,6 +54,17 @@ public class WeeklyTaskService {
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
                 .build();
+
+        // Auto-associate monster for MONSTER_KILL tasks
+        if ("MONSTER_KILL".equalsIgnoreCase(request.getTaskType()) && request.getMonsterName() != null) {
+            Optional<Monster> monster = monsterRepository.findByNameIgnoreCase(request.getMonsterName());
+            if (monster.isPresent()) {
+                task.setMonster(monster.get());
+                log.debug("Associated monster: {} with task", monster.get().getName());
+            } else {
+                log.warn("Monster not found for name: {}", request.getMonsterName());
+            }
+        }
 
         return taskRepository.save(task);
     }
@@ -62,6 +79,7 @@ public class WeeklyTaskService {
         task.setName(request.getName());
         task.setItemName(request.getItemName());
         task.setItemQuantity(request.getItemQuantity());
+        task.setImageUrl(request.getImageUrl());
         task.setMonsterName(request.getMonsterName());
         task.setKillCount(request.getKillCount());
         task.setLocation(request.getLocation());
@@ -72,6 +90,20 @@ public class WeeklyTaskService {
         task.setRequirements(request.getRequirements());
         task.setNotes(request.getNotes());
         task.setUpdatedAt(LocalDateTime.now());
+
+        // Update monster association for MONSTER_KILL tasks
+        if ("MONSTER_KILL".equalsIgnoreCase(request.getTaskType()) && request.getMonsterName() != null) {
+            Optional<Monster> monster = monsterRepository.findByNameIgnoreCase(request.getMonsterName());
+            if (monster.isPresent()) {
+                task.setMonster(monster.get());
+                log.debug("Updated monster association: {}", monster.get().getName());
+            } else {
+                log.warn("Monster not found for name: {}", request.getMonsterName());
+                task.setMonster(null);
+            }
+        } else {
+            task.setMonster(null);
+        }
 
         return taskRepository.save(task);
     }
@@ -89,5 +121,78 @@ public class WeeklyTaskService {
     public List<WeeklyTask> getTasksByDifficulty(Integer maxDifficulty) {
         log.debug("Fetching tasks with difficulty <= {}", maxDifficulty);
         return taskRepository.findByDifficultyLessThanEqual(maxDifficulty);
+    }
+
+    /**
+     * Search tasks by item name or monster name
+     */
+    public List<WeeklyTask> searchTasks(String searchTerm) {
+        log.debug("Searching tasks by term: {}", searchTerm);
+        return taskRepository.searchByItemOrMonster(searchTerm);
+    }
+
+    /**
+     * Analyze session and return looted items that can be sold
+     */
+    public SessionAnalyzerResponse analyzeSession(List<String> monsterNames, Map<String, Integer> monsterKillCounts,
+            List<String> lootedItems) {
+        log.debug("Analyzing session with {} looted items", lootedItems != null ? lootedItems.size() : 0);
+
+        // Find looted items that can be sold
+        List<SessionAnalyzerResponse.TaskItemInfo> lootedTaskItems = new ArrayList<>();
+
+        if (lootedItems != null && !lootedItems.isEmpty()) {
+            Set<Long> foundItemIds = new HashSet<>();
+
+            log.debug("Processing {} looted items for task matching", lootedItems.size());
+
+            for (String itemName : lootedItems) {
+                // Remove common articles (a, an) from item name for better matching
+                String cleanedItemName = itemName.toLowerCase()
+                        .replaceFirst("^a\\s+", "")
+                        .replaceFirst("^an\\s+", "")
+                        .trim();
+
+                log.debug("Searching for item: '{}' (cleaned: '{}')", itemName, cleanedItemName);
+
+                // Use optimized query with projection (only necessary fields)
+                List<Object[]> results = itemRepository.findBasicInfoByNameContainingIgnoreCase(cleanedItemName);
+
+                if (!results.isEmpty()) {
+                    Object[] row = results.get(0);
+                    Long itemId = (Long) row[0];
+                    String itemNameDb = (String) row[1];
+                    String sellTo = (String) row[2];
+                    Integer price = (Integer) row[3];
+
+                    if (!foundItemIds.contains(itemId)) {
+                        foundItemIds.add(itemId);
+
+                        log.debug("Found item: {} (sells to: {}, price: {})", itemNameDb, sellTo, price);
+
+                        // Add to looted task items list
+                        lootedTaskItems.add(SessionAnalyzerResponse.TaskItemInfo.builder()
+                                .itemName(itemNameDb)
+                                .imageUrl("/api/items/" + itemId + "/image")
+                                .quantityNeeded(1)
+                                .taskId(itemId)
+                                .taskName("Sell to " + sellTo)
+                                .price(price)
+                                .build());
+                    }
+                }
+            }
+        }
+
+        log.debug("Found {} valuable items", lootedTaskItems.size());
+
+        return SessionAnalyzerResponse.builder()
+                .monsterKillTasks(new ArrayList<>())
+                .itemDeliveryTasks(new ArrayList<>())
+                .monsterKillCounts(monsterKillCounts)
+                .totalMonsterTasks(0)
+                .totalItemTasks(0)
+                .lootedTaskItems(lootedTaskItems)
+                .build();
     }
 }

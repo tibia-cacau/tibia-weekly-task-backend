@@ -29,7 +29,13 @@ public class WeeklyTask {
 
     private Integer itemQuantity; // For item delivery tasks
 
-    private String monsterName; // For monster kill tasks
+    private String imageUrl; // Image URL for the item (for item delivery tasks)
+
+    private String monsterName; // For monster kill tasks (kept for backwards compatibility)
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "monster_id")
+    private Monster monster; // Linked monster entity for MONSTER_KILL tasks
 
     private Integer killCount; // For monster kill tasks
 

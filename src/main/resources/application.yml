@@ -33,6 +33,12 @@ reidoscoins:
         url: ${REIDOSCOINS_API_URL:https://www.reidoscoins.com.br/index.php}
         token: ${REIDOSCOINS_API_TOKEN:NBMRJK348THG3W7TRY2GHBV38245YR1291}
 
+tibiadraptor:
+    api:
+        url: ${TIBIADRAPTOR_API_URL:https://tibiadraptor.com/api/v1}
+    sync:
+        enabled: ${TIBIADRAPTOR_SYNC_ENABLED:true}
+
 logging:
     level:
         com.tibia: DEBUG

@@ -24,6 +24,7 @@ public class Item {
     private String name; // Nome do item
 
     @Lob
+    @Basic(fetch = FetchType.LAZY)
     @Column(columnDefinition = "LONGTEXT")
     private String imageData; // Imagem em Base64
 
