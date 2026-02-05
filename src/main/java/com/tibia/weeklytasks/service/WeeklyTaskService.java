@@ -1,6 +1,6 @@
 package com.tibia.weeklytasks.service;
 
-import com.tibia.weeklytasks.dto.SessionAnalyzerResponse;
+import com.tibia.weeklytasks.dto.SessionAnalyserResponse;
 import com.tibia.weeklytasks.dto.WeeklyTaskRequest;
 import com.tibia.weeklytasks.model.Monster;
 import com.tibia.weeklytasks.model.WeeklyTask;
@@ -134,12 +134,12 @@ public class WeeklyTaskService {
     /**
      * Analyze session and return looted items that can be sold
      */
-    public SessionAnalyzerResponse analyzeSession(List<String> monsterNames, Map<String, Integer> monsterKillCounts,
+    public SessionAnalyserResponse analyzeSession(List<String> monsterNames, Map<String, Integer> monsterKillCounts,
             List<String> lootedItems) {
         log.debug("Analyzing session with {} looted items", lootedItems != null ? lootedItems.size() : 0);
 
         // Find looted items that can be sold
-        List<SessionAnalyzerResponse.TaskItemInfo> lootedTaskItems = new ArrayList<>();
+        List<SessionAnalyserResponse.TaskItemInfo> lootedTaskItems = new ArrayList<>();
 
         if (lootedItems != null && !lootedItems.isEmpty()) {
             Set<Long> foundItemIds = new HashSet<>();
@@ -171,7 +171,7 @@ public class WeeklyTaskService {
                         log.debug("Found item: {} (sells to: {}, price: {})", itemNameDb, sellTo, price);
 
                         // Add to looted task items list
-                        lootedTaskItems.add(SessionAnalyzerResponse.TaskItemInfo.builder()
+                        lootedTaskItems.add(SessionAnalyserResponse.TaskItemInfo.builder()
                                 .itemName(itemNameDb)
                                 .imageUrl("/api/items/" + itemId + "/image")
                                 .quantityNeeded(1)
@@ -186,7 +186,7 @@ public class WeeklyTaskService {
 
         log.debug("Found {} valuable items", lootedTaskItems.size());
 
-        return SessionAnalyzerResponse.builder()
+        return SessionAnalyserResponse.builder()
                 .monsterKillTasks(new ArrayList<>())
                 .itemDeliveryTasks(new ArrayList<>())
                 .monsterKillCounts(monsterKillCounts)

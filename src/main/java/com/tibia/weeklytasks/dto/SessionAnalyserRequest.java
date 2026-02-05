@@ -12,7 +12,7 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class SessionAnalyzerRequest {
+public class SessionAnalyserRequest {
 
     @NotEmpty(message = "Monster names list cannot be empty")
     private List<String> monsterNames;

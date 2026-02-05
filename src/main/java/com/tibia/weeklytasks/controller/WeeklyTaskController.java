@@ -1,7 +1,7 @@
 package com.tibia.weeklytasks.controller;
 
-import com.tibia.weeklytasks.dto.SessionAnalyzerRequest;
-import com.tibia.weeklytasks.dto.SessionAnalyzerResponse;
+import com.tibia.weeklytasks.dto.SessionAnalyserRequest;
+import com.tibia.weeklytasks.dto.SessionAnalyserResponse;
 import com.tibia.weeklytasks.dto.WeeklyTaskRequest;
 import com.tibia.weeklytasks.model.WeeklyTask;
 import com.tibia.weeklytasks.service.WeeklyTaskService;
@@ -84,8 +84,8 @@ public class WeeklyTaskController {
     }
 
     @PostMapping("/analyze-session")
-    public ResponseEntity<SessionAnalyzerResponse> analyzeSession(
-            @Valid @RequestBody SessionAnalyzerRequest request) {
+    public ResponseEntity<SessionAnalyserResponse> analyzeSession(
+            @Valid @RequestBody SessionAnalyserRequest request) {
         log.info("POST /api/tasks/analyze-session - Analyzing session with {} monsters and {} looted items",
                 request.getMonsterNames().size(),
                 request.getLootedItems() != null ? request.getLootedItems().size() : 0);
@@ -95,7 +95,7 @@ public class WeeklyTaskController {
         Map<String, Integer> killCounts = new HashMap<>();
         request.getMonsterNames().forEach(name -> killCounts.put(name, 0));
 
-        SessionAnalyzerResponse response = taskService.analyzeSession(
+        SessionAnalyserResponse response = taskService.analyzeSession(
                 request.getMonsterNames(),
                 killCounts,
                 request.getLootedItems());

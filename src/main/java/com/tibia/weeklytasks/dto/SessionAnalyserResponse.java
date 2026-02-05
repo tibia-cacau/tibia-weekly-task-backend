@@ -13,7 +13,7 @@ import java.util.Map;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class SessionAnalyzerResponse {
+public class SessionAnalyserResponse {
 
     private List<WeeklyTask> itemDeliveryTasks;
     private List<WeeklyTask> monsterKillTasks;
