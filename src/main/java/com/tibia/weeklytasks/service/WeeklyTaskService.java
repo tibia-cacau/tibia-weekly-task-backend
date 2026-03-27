@@ -132,17 +132,19 @@ public class WeeklyTaskService {
     }
 
     /**
-     * Analyze session and return looted items that can be sold
+     * Analyze session and return looted items separated into task items and
+     * non-task items
      */
     public SessionAnalyserResponse analyzeSession(List<String> monsterNames, Map<String, Integer> monsterKillCounts,
             List<String> lootedItems) {
         log.debug("Analyzing session with {} looted items", lootedItems != null ? lootedItems.size() : 0);
 
-        // Find looted items that can be sold
         List<SessionAnalyserResponse.TaskItemInfo> lootedTaskItems = new ArrayList<>();
+        List<SessionAnalyserResponse.NonTaskItemInfo> nonTaskItems = new ArrayList<>();
 
         if (lootedItems != null && !lootedItems.isEmpty()) {
-            Set<Long> foundItemIds = new HashSet<>();
+            Set<Long> foundTaskItemIds = new HashSet<>();
+            Set<String> processedItems = new HashSet<>();
 
             log.debug("Processing {} looted items for task matching", lootedItems.size());
 
@@ -152,6 +154,12 @@ public class WeeklyTaskService {
                         .replaceFirst("^a\\s+", "")
                         .replaceFirst("^an\\s+", "")
                         .trim();
+
+                // Skip if already processed (avoid duplicates)
+                if (processedItems.contains(cleanedItemName)) {
+                    continue;
+                }
+                processedItems.add(cleanedItemName);
 
                 log.debug("Searching for item: '{}' (cleaned: '{}')", itemName, cleanedItemName);
 
@@ -165,34 +173,55 @@ public class WeeklyTaskService {
                     String sellTo = (String) row[2];
                     Integer price = (Integer) row[3];
 
-                    if (!foundItemIds.contains(itemId)) {
-                        foundItemIds.add(itemId);
+                    if (!foundTaskItemIds.contains(itemId)) {
+                        foundTaskItemIds.add(itemId);
 
-                        log.debug("Found item: {} (sells to: {}, price: {})", itemNameDb, sellTo, price);
+                        // If item has sellTo and price, it's a task item
+                        if (sellTo != null && !sellTo.isEmpty() && price != null && price > 0) {
+                            log.debug("Found task item: {} (sells to: {}, price: {})", itemNameDb, sellTo, price);
 
-                        // Add to looted task items list
-                        lootedTaskItems.add(SessionAnalyserResponse.TaskItemInfo.builder()
-                                .itemName(itemNameDb)
-                                .imageUrl("/api/items/" + itemId + "/image")
-                                .quantityNeeded(1)
-                                .taskId(itemId)
-                                .taskName("Sell to " + sellTo)
-                                .price(price)
-                                .build());
+                            lootedTaskItems.add(SessionAnalyserResponse.TaskItemInfo.builder()
+                                    .itemName(itemNameDb)
+                                    .imageUrl("/api/items/" + itemId + "/image")
+                                    .quantityNeeded(1)
+                                    .taskId(itemId)
+                                    .taskName("Sell to " + sellTo)
+                                    .price(price)
+                                    .build());
+                        } else {
+                            // Otherwise, it's a non-task item
+                            log.debug("Found non-task item: {}", itemNameDb);
+
+                            nonTaskItems.add(SessionAnalyserResponse.NonTaskItemInfo.builder()
+                                    .itemName(itemNameDb)
+                                    .imageUrl("/api/items/" + itemId + "/image")
+                                    .itemId(itemId)
+                                    .build());
+                        }
                     }
+                } else {
+                    // Item not found in database - add as non-task item without image
+                    log.debug("Item '{}' not found in database, adding as non-task item", cleanedItemName);
+
+                    // Capitalize first letter of each word for display
+                    String displayName = Arrays.stream(cleanedItemName.split("\\s+"))
+                            .map(word -> word.substring(0, 1).toUpperCase() + word.substring(1))
+                            .collect(Collectors.joining(" "));
+
+                    nonTaskItems.add(SessionAnalyserResponse.NonTaskItemInfo.builder()
+                            .itemName(displayName)
+                            .imageUrl(null) // No image available for items not in database
+                            .itemId(null)
+                            .build());
                 }
             }
         }
 
-        log.debug("Found {} valuable items", lootedTaskItems.size());
+        log.debug("Found {} task items and {} non-task items", lootedTaskItems.size(), nonTaskItems.size());
 
         return SessionAnalyserResponse.builder()
-                .monsterKillTasks(new ArrayList<>())
-                .itemDeliveryTasks(new ArrayList<>())
-                .monsterKillCounts(monsterKillCounts)
-                .totalMonsterTasks(0)
-                .totalItemTasks(0)
                 .lootedTaskItems(lootedTaskItems)
+                .nonTaskItems(nonTaskItems)
                 .build();
     }
 }

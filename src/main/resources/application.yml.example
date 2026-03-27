@@ -1,3 +1,7 @@
+# Example Application Configuration
+# This file shows the expected structure.
+# Real values are loaded from environment variables.
+
 spring:
     application:
         name: weekly-tasks-backend
@@ -12,6 +16,13 @@ spring:
         username: ${DATASOURCE_USERNAME}
         password: ${DATASOURCE_PASSWORD}
         driver-class-name: com.mysql.cj.jdbc.Driver
+        hikari:
+            maximum-pool-size: 10
+            minimum-idle: 5
+            connection-timeout: 60000
+            idle-timeout: 600000
+            max-lifetime: 1800000
+            connection-test-query: SELECT 1
 
     jpa:
         hibernate:
@@ -23,24 +34,24 @@ spring:
                 format_sql: true
 
 server:
-    port: ${PORT:8080}
+    port: ${PORT}
 
 cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200,http://localhost:4201,https://tibia-cacau.github.io}
+    allowed-origins: ${CORS_ALLOWED_ORIGINS}
 
 reidoscoins:
     api:
-        url: ${REIDOSCOINS_API_URL:https://www.reidoscoins.com.br/index.php}
-        token: ${REIDOSCOINS_API_TOKEN:NBMRJK348THG3W7TRY2GHBV38245YR1291}
+        url: ${REIDOSCOINS_API_URL}
+        token: ${REIDOSCOINS_API_TOKEN}
 
 tibiadraptor:
     api:
-        url: ${TIBIADRAPTOR_API_URL:https://tibiadraptor.com/api/v1}
+        url: ${TIBIADRAPTOR_API_URL}
     sync:
-        enabled: ${TIBIADRAPTOR_SYNC_ENABLED:true}
+        enabled: ${TIBIADRAPTOR_SYNC_ENABLED}
 
 logging:
     level:
-        com.tibia: DEBUG
-        org.springframework.orm.jpa: DEBUG
+        root: INFO
+        com.tibia.weeklytasks: DEBUG
         org.hibernate.SQL: DEBUG

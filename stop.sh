@@ -1,15 +1,38 @@
 #!/bin/bash
+# Stop Weekly Tasks Backend
 
-# Stop script for KingHost deployment
+echo "Stopping Weekly Tasks Backend..."
 
-if [ -f application.pid ]; then
-    PID=$(cat application.pid)
-    echo "Stopping application with PID: $PID"
-    kill $PID
-    rm application.pid
-    echo "Application stopped"
-else
-    echo "No PID file found. Searching for running process..."
-    pkill -f "weekly-tasks-backend-1.0.0.jar"
-    echo "Process killed (if any)"
+# Navigate to script directory
+cd "$(dirname "$0")"
+
+# Find all running instances
+PIDS=$(ps aux | grep "[j]ava.*weekly-tasks-backend.*\.jar" | awk '{print $2}')
+
+if [ -z "$PIDS" ]; then
+    echo "⚠ Backend is not running"
+    exit 0
 fi
+
+# Stop all instances
+for PID in $PIDS; do
+    echo "Stopping process $PID..."
+    kill $PID
+    
+    # Wait up to 10 seconds for graceful shutdown
+    for i in {1..10}; do
+        if ! ps -p $PID > /dev/null 2>&1; then
+            echo "✓ Process $PID stopped gracefully"
+            break
+        fi
+        sleep 1
+    done
+    
+    # Force kill if still running
+    if ps -p $PID > /dev/null 2>&1; then
+        echo "⚠ Force killing process $PID..."
+        kill -9 $PID
+    fi
+done
+
+echo "✓ Backend stopped successfully"

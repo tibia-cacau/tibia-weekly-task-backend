@@ -26,6 +26,11 @@ public class ItemDTO {
 
     private String sellToNpc;
 
-    @NotNull(message = "Preço é obrigatório")
-    private Integer priceAtNpc;
+    private Integer priceAtNpc; // Removido @NotNull - opcional para itens do Tibia Draptor
+
+    private Boolean isWeeklyTask; // true = weekly task item, false = Tibia Draptor item
+
+    private Long tibiadraptorItemId; // ID do item na API do Tibia Draptor (se aplicável)
+
+    private String rarity; // Raridade do loot (Common, Uncommon, Semi-Rare, Rare, Very Rare)
 }

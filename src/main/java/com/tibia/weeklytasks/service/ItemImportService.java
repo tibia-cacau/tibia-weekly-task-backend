@@ -1,7 +1,13 @@
 package com.tibia.weeklytasks.service;
 
+import com.tibia.weeklytasks.dto.ItemImportResponse;
+import com.tibia.weeklytasks.dto.TibiaDraptorItemImportRequest;
 import com.tibia.weeklytasks.model.Item;
+import com.tibia.weeklytasks.model.Monster;
 import com.tibia.weeklytasks.repository.ItemRepository;
+import com.tibia.weeklytasks.repository.MonsterRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
@@ -9,8 +15,9 @@ import org.apache.poi.xssf.usermodel.*;
 import org.apache.poi.hssf.usermodel.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -22,6 +29,10 @@ import java.util.stream.Collectors;
 public class ItemImportService {
 
     private final ItemRepository itemRepository;
+    private final MonsterRepository monsterRepository;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public int importFromExcel(MultipartFile file) throws IOException {
         log.info("Starting import from Excel file: {}", file.getOriginalFilename());
@@ -53,6 +64,7 @@ public class ItemImportService {
                         .droppedBy(parseDroppedBy(getCellValueAsString(row.getCell(2))))
                         .sellTo(getCellValueAsString(row.getCell(3)))
                         .price(getCellValueAsInteger(row.getCell(4)))
+                        .isWeeklyTask(true) // IMPORTANT: itens do Excel são weekly task items
                         .createdAt(LocalDateTime.now())
                         .updatedAt(LocalDateTime.now())
                         .build();
@@ -203,6 +215,208 @@ public class ItemImportService {
     public void clearAllItems() {
         itemRepository.deleteAll();
         log.info("Cleared all items from database");
+    }
+
+    /**
+     * Importa itens do Tibia Draptor a partir de dados de monstros e loot
+     * Processa em lotes com transações separadas para evitar timeout
+     */
+    public ItemImportResponse importFromTibiaDraptor(TibiaDraptorItemImportRequest request) {
+        log.info("=".repeat(80));
+        log.info("🚀 INICIANDO IMPORTAÇÃO DO TIBIA DRAPTOR");
+        log.info("📊 Total de monstros a processar: {}", request.getMonsters().size());
+        log.info("⏰ Início: {}", LocalDateTime.now());
+        log.info("=".repeat(80));
+
+        final int BATCH_SIZE = 10; // Processar 10 monstros por transação
+        int totalItems = 0;
+        int importedItems = 0;
+        int skippedItems = 0;
+        int linkedToMonsters = 0;
+        int monstersProcessed = 0;
+        int failedBatches = 0;
+
+        try {
+            List<TibiaDraptorItemImportRequest.MonsterWithLoot> allMonsters = request.getMonsters();
+
+            // Dividir em lotes de BATCH_SIZE monstros
+            for (int i = 0; i < allMonsters.size(); i += BATCH_SIZE) {
+                int endIndex = Math.min(i + BATCH_SIZE, allMonsters.size());
+                List<TibiaDraptorItemImportRequest.MonsterWithLoot> batch = allMonsters.subList(i, endIndex);
+
+                log.info("📦 Processando lote {}/{} ({} monstros)",
+                        (i / BATCH_SIZE) + 1,
+                        (int) Math.ceil((double) allMonsters.size() / BATCH_SIZE),
+                        batch.size());
+
+                try {
+                    // Processar batch em transação separada
+                    BatchResult result = processMonsterBatch(batch);
+
+                    totalItems += result.totalItems;
+                    importedItems += result.importedItems;
+                    skippedItems += result.skippedItems;
+                    linkedToMonsters += result.linkedToMonsters;
+                    monstersProcessed += result.monstersProcessed;
+
+                    log.info("✅ Lote concluído: {} monstros, {} items processados",
+                            result.monstersProcessed, result.totalItems);
+
+                } catch (Exception e) {
+                    failedBatches++;
+                    log.error("❌ Erro ao processar lote {}: {}", (i / BATCH_SIZE) + 1, e.getMessage());
+                    // Continua com o próximo lote
+                }
+            }
+
+            log.info("=".repeat(80));
+            log.info("✅ IMPORTAÇÃO CONCLUÍDA!");
+            log.info("⏰ Término: {}", LocalDateTime.now());
+            log.info("📊 Estatísticas:");
+            log.info("   🐉 Monstros processados: {}", monstersProcessed);
+            log.info("   📦 Total de items: {}", totalItems);
+            log.info("   ✨ Novos items importados: {}", importedItems);
+            log.info("   🔄 Items atualizados: {}", skippedItems);
+            log.info("   🔗 Relações monstro-item criadas: {}", linkedToMonsters);
+            if (failedBatches > 0) {
+                log.warn("   ⚠️  Lotes com erro: {}", failedBatches);
+            }
+            log.info("=".repeat(80));
+
+            return ItemImportResponse.builder()
+                    .success(failedBatches == 0)
+                    .message(failedBatches == 0 ? "Import completed successfully"
+                            : String.format("Import completed with %d failed batches", failedBatches))
+                    .totalItems(totalItems)
+                    .importedItems(importedItems)
+                    .skippedItems(skippedItems)
+                    .linkedToMonsters(linkedToMonsters)
+                    .build();
+
+        } catch (Exception e) {
+            log.error("❌ Erro crítico durante importação", e);
+            return ItemImportResponse.builder()
+                    .success(false)
+                    .message("Critical error during import: " + e.getMessage())
+                    .totalItems(totalItems)
+                    .importedItems(importedItems)
+                    .skippedItems(skippedItems)
+                    .linkedToMonsters(linkedToMonsters)
+                    .build();
+        }
+    }
+
+    /**
+     * Processa um lote de monstros em uma transação separada
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    protected BatchResult processMonsterBatch(List<TibiaDraptorItemImportRequest.MonsterWithLoot> monsters) {
+        BatchResult result = new BatchResult();
+
+        for (TibiaDraptorItemImportRequest.MonsterWithLoot monsterData : monsters) {
+            // Buscar ou criar o monstro no banco
+            Monster monster = monsterRepository.findByTibiadraptorId(monsterData.getId())
+                    .orElseGet(() -> {
+                        Monster newMonster = Monster.builder()
+                                .name(monsterData.getName())
+                                .tibiadraptorId(monsterData.getId())
+                                .createdAt(LocalDateTime.now())
+                                .lastSyncedAt(LocalDateTime.now())
+                                .build();
+                        return monsterRepository.save(newMonster);
+                    });
+
+            result.monstersProcessed++;
+            log.debug("🐉 Processando: {}", monster.getName());
+
+            // Processar cada categoria de loot
+            Map<String, List<TibiaDraptorItemImportRequest.LootItem>> lootMap = monsterData.getLoot();
+            if (lootMap == null || lootMap.isEmpty()) {
+                log.debug("Monster {} has no loot data", monster.getName());
+                continue;
+            }
+
+            for (Map.Entry<String, List<TibiaDraptorItemImportRequest.LootItem>> entry : lootMap.entrySet()) {
+                String rarity = entry.getKey();
+                List<TibiaDraptorItemImportRequest.LootItem> items = entry.getValue();
+
+                for (TibiaDraptorItemImportRequest.LootItem lootItem : items) {
+                    result.totalItems++;
+
+                    // Verificar se o item já foi importado do Tibia Draptor
+                    Optional<Item> existingItem = itemRepository.findByTibiadraptorItemId(lootItem.getId());
+
+                    // Se não encontrou por ID, verificar pelo nome
+                    if (existingItem.isEmpty()) {
+                        existingItem = itemRepository.findByNameIgnoreCase(lootItem.getName())
+                                .stream()
+                                .findFirst();
+                    }
+
+                    Item item;
+                    if (existingItem.isPresent()) {
+                        item = existingItem.get();
+
+                        // Atualizar com informações do Tibia Draptor
+                        item.setTibiadraptorItemId(lootItem.getId());
+                        item.setRarity(rarity);
+
+                        // Atualizar imagem se não tiver ou se veio nova
+                        if ((item.getImageData() == null || item.getImageData().isEmpty()) &&
+                                lootItem.getImage() != null && !lootItem.getImage().isEmpty()) {
+                            item.setImageData(lootItem.getImage());
+                        }
+
+                        item.setUpdatedAt(LocalDateTime.now());
+                        item = itemRepository.save(item);
+
+                        log.debug("Item {} updated with Tibia Draptor data", item.getName());
+                        result.skippedItems++;
+                    } else {
+                        // Criar novo item do Tibia Draptor
+                        item = Item.builder()
+                                .name(lootItem.getName())
+                                .tibiadraptorItemId(lootItem.getId())
+                                .rarity(rarity)
+                                .imageData(lootItem.getImage())
+                                .isWeeklyTask(false)
+                                .droppedBy(new ArrayList<>())
+                                .createdAt(LocalDateTime.now())
+                                .updatedAt(LocalDateTime.now())
+                                .build();
+
+                        item = itemRepository.save(item);
+                        result.importedItems++;
+                        log.debug("Imported new item: {} (Tibia Draptor ID: {})", item.getName(),
+                                item.getTibiadraptorItemId());
+                    }
+
+                    // Adicionar o monstro à lista de droppedBy
+                    if (item.getDroppedBy() == null) {
+                        item.setDroppedBy(new ArrayList<>());
+                    }
+
+                    if (!item.getDroppedBy().contains(monster.getName())) {
+                        item.getDroppedBy().add(monster.getName());
+                        item.setUpdatedAt(LocalDateTime.now());
+                        itemRepository.save(item);
+                        result.linkedToMonsters++;
+                        log.debug("Linked {} to monster {}", item.getName(), monster.getName());
+                    }
+                }
+            }
+        }
+
+        return result;
+    }
+
+    // Classe interna para resultado de lote
+    private static class BatchResult {
+        int totalItems = 0;
+        int importedItems = 0;
+        int skippedItems = 0;
+        int linkedToMonsters = 0;
+        int monstersProcessed = 0;
     }
 
     // Classe interna para armazenar dados da imagem

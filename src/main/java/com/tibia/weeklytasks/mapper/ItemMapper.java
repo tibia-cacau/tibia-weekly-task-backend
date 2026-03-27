@@ -21,6 +21,9 @@ public class ItemMapper {
                 .droppedBy(item.getDroppedBy())
                 .sellToNpc(item.getSellTo())
                 .priceAtNpc(item.getPrice())
+                .isWeeklyTask(item.getIsWeeklyTask())
+                .tibiadraptorItemId(item.getTibiadraptorItemId())
+                .rarity(item.getRarity())
                 .build();
     }
 
@@ -35,6 +38,9 @@ public class ItemMapper {
                 .droppedBy(dto.getDroppedBy())
                 .sellTo(dto.getSellToNpc())
                 .price(dto.getPriceAtNpc())
+                .isWeeklyTask(dto.getIsWeeklyTask() != null ? dto.getIsWeeklyTask() : true)
+                .tibiadraptorItemId(dto.getTibiadraptorItemId())
+                .rarity(dto.getRarity())
                 .build();
 
         if (dto.getId() == null) {

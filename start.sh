@@ -1,30 +1,53 @@
 #!/bin/bash
+# Start Weekly Tasks Backend
 
-# KingHost Java Application Startup Script
-# Weekly Tasks Backend - Spring Boot 3.2.0 with MySQL
+echo "Starting Weekly Tasks Backend..."
 
-# Set environment variables for KingHost MySQL database
-export DATASOURCE_URL="jdbc:mysql://mysql50-farm1.kinghost.net:3306/tibiacacau?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true"
-export DATASOURCE_USERNAME="tibiacacau"
-export DATASOURCE_PASSWORD="tibiacacau123"
+# Navigate to script directory
+cd "$(dirname "$0")"
 
-# Set server port (default 8080)
-export PORT=8080
+# Load environment variables from .env file (optional)
+if [ -f .env ]; then
+    echo "Loading environment variables from .env..."
+    set -a  # Automatically export all variables
+    source .env
+    set +a  # Stop auto-exporting
+fi
 
-# Set CORS allowed origins (production domains)
-export CORS_ALLOWED_ORIGINS="http://tibiacacau.com.br,https://tibiacacau.com.br,https://tibia-cacau.github.io"
+# Find the JAR file (use the most recent one)
+JAR_FILE=$(ls -t weekly-tasks-backend-*.jar 2>/dev/null | head -n 1)
 
-# Java options
-export JAVA_OPTS="-Xms256m -Xmx512m"
+if [ -z "$JAR_FILE" ]; then
+    echo "✗ Error: No JAR file found!"
+    echo "  Expected: weekly-tasks-backend-*.jar"
+    exit 1
+fi
 
-# Start the application
-nohup java $JAVA_OPTS -jar weekly-tasks-backend-1.0.0.jar > application.log 2>&1 &
+echo "Using JAR: $JAR_FILE"
 
-# Save PID
-echo $! > application.pid
+# Check if already running
+if ps aux | grep "[j]ava.*weekly-tasks-backend.*\.jar" > /dev/null; then
+    echo "⚠ Backend is already running!"
+    echo "  Use ./stop.sh to stop it first, or ./restart.sh to restart"
+    exit 1
+fi
 
-echo "Application started with PID: $(cat application.pid)"
-echo "Log file: application.log"
-echo ""
-echo "To stop: kill \$(cat application.pid)"
-echo "To view logs: tail -f application.log"
+# Start the backend
+nohup java -jar "$JAR_FILE" > backend.log 2>&1 &
+PID=$!
+
+# Wait a moment and check if it started
+sleep 2
+
+if ps -p $PID > /dev/null; then
+    echo "✓ Backend started successfully!"
+    echo "  PID: $PID"
+    echo "  Log: backend.log"
+    echo ""
+    echo "To check status: tail -f backend.log"
+    echo "To stop: ./stop.sh"
+else
+    echo "✗ Failed to start backend"
+    echo "Check backend.log for errors"
+    exit 1
+fi

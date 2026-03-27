@@ -2,7 +2,9 @@ package com.tibia.weeklytasks.controller;
 
 import com.tibia.weeklytasks.dto.ImportResultDTO;
 import com.tibia.weeklytasks.dto.ItemDTO;
+import com.tibia.weeklytasks.dto.ItemImportResponse;
 import com.tibia.weeklytasks.dto.PageResponseDTO;
+import com.tibia.weeklytasks.dto.TibiaDraptorItemImportRequest;
 import com.tibia.weeklytasks.mapper.ItemMapper;
 import com.tibia.weeklytasks.model.Item;
 import com.tibia.weeklytasks.repository.ItemRepository;
@@ -75,13 +77,17 @@ public class ItemController {
             @RequestParam(defaultValue = "30") int size,
             @RequestParam(defaultValue = "name") String sortBy,
             @RequestParam(defaultValue = "ASC") String sortDirection,
-            @RequestParam(required = false) String sellToNpc) {
+            @RequestParam(required = false) String sellToNpc,
+            @RequestParam(defaultValue = "true") boolean weeklyOnly) {
         Sort.Direction direction = sortDirection.equalsIgnoreCase("DESC") ? Sort.Direction.DESC : Sort.Direction.ASC;
         Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
 
         Page<Item> itemPage;
         if (sellToNpc != null && !sellToNpc.isEmpty()) {
             itemPage = itemRepository.findBySellTo(sellToNpc, pageable);
+        } else if (weeklyOnly) {
+            // Retorna apenas itens marcados como weekly tasks
+            itemPage = itemRepository.findWeeklyTaskItemsPageable(pageable);
         } else {
             itemPage = itemRepository.findAll(pageable);
         }
@@ -109,12 +115,15 @@ public class ItemController {
             @RequestParam String name,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "30") int size,
-            @RequestParam(required = false) String sellToNpc) {
+            @RequestParam(required = false) String sellToNpc,
+            @RequestParam(defaultValue = "true") boolean weeklyOnly) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "name"));
 
         Page<Item> itemPage;
         if (sellToNpc != null && !sellToNpc.isEmpty()) {
             itemPage = itemRepository.findByNameContainingAndSellTo(name, sellToNpc, pageable);
+        } else if (weeklyOnly) {
+            itemPage = itemRepository.findWeeklyTaskItemsByNameContaining(name, pageable);
         } else {
             itemPage = itemRepository.findByNameContaining(name, pageable);
         }
@@ -193,6 +202,41 @@ public class ItemController {
         }
         itemRepository.deleteById(id);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Endpoint para importar itens do Tibia Draptor
+     * CRITICAL: itens importados terão is_weekly_task = false
+     */
+    @PostMapping("/import/tibia-draptor")
+    public ResponseEntity<ItemImportResponse> importFromTibiaDraptor(
+            @Valid @RequestBody TibiaDraptorItemImportRequest request) {
+        log.info("Starting Tibia Draptor item import. Monsters in request: {}",
+                request.getMonsters() != null ? request.getMonsters().size() : 0);
+
+        try {
+            ItemImportResponse response = itemImportService.importFromTibiaDraptor(request);
+
+            if (response.isSuccess()) {
+                log.info("Tibia Draptor import successful. Imported: {}, Skipped: {}, Linked to monsters: {}",
+                        response.getImportedItems(), response.getSkippedItems(), response.getLinkedToMonsters());
+                return ResponseEntity.ok(response);
+            } else {
+                log.error("Tibia Draptor import failed: {}", response.getMessage());
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+            }
+        } catch (Exception e) {
+            log.error("Error during Tibia Draptor import", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ItemImportResponse.builder()
+                            .success(false)
+                            .message("Error during import: " + e.getMessage())
+                            .totalItems(0)
+                            .importedItems(0)
+                            .skippedItems(0)
+                            .linkedToMonsters(0)
+                            .build());
+        }
     }
 
     @DeleteMapping

@@ -16,6 +16,8 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
 
     Optional<Item> findByName(String name);
 
+    List<Item> findByNameIgnoreCase(String name);
+
     boolean existsByName(String name);
 
     @Query("SELECT i FROM Item i WHERE LOWER(i.name) LIKE LOWER(CONCAT('%', :name, '%'))")
@@ -33,4 +35,22 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
 
     @Query("SELECT i FROM Item i JOIN i.droppedBy d WHERE LOWER(d) LIKE LOWER(CONCAT('%', :creature, '%'))")
     List<Item> findByDroppedByContaining(@Param("creature") String creature);
+
+    // Queries para itens do Tibia Draptor
+    Optional<Item> findByTibiadraptorItemId(Long tibiadraptorItemId);
+
+    @Query("SELECT i FROM Item i WHERE i.isWeeklyTask = true")
+    List<Item> findWeeklyTaskItems();
+
+    @Query("SELECT i FROM Item i WHERE i.isWeeklyTask = true")
+    Page<Item> findWeeklyTaskItemsPageable(Pageable pageable);
+
+    @Query("SELECT i FROM Item i WHERE i.isWeeklyTask = false")
+    List<Item> findTibiaDraptorItems();
+
+    @Query("SELECT i FROM Item i WHERE i.isWeeklyTask = true AND LOWER(i.name) LIKE LOWER(CONCAT('%', :name, '%'))")
+    Page<Item> findWeeklyTaskItemsByNameContaining(@Param("name") String name, Pageable pageable);
+
+    @Query("SELECT i FROM Item i WHERE i.isWeeklyTask = false AND LOWER(i.name) LIKE LOWER(CONCAT('%', :name, '%'))")
+    Page<Item> findTibiaDraptorItemsByNameContaining(@Param("name") String name, Pageable pageable);
 }
