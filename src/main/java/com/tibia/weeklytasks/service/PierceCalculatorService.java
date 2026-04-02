@@ -74,11 +74,12 @@ public class PierceCalculatorService {
                 double armorPenetration = pierceBuild.getArmorPenetration() != null ? pierceBuild.getArmorPenetration()
                         : 0.0;
 
-                double effectiveArmor = monster.getArmor() * (1 - (armorPenetration / 100.0));
+                int armor = monster.getArmor() != null ? monster.getArmor() : 0;
+                double effectiveArmor = armor * (1 - (armorPenetration / 100.0));
                 double damageAfterArmor = Math.max(0, damageForThisElement - effectiveArmor);
 
-                // Apply physical pierce to resistance (100% for physical)
-                double originalResistance = 100.0; // Physical resistance is always 100% baseline
+                // Apply physical pierce to the monster's actual physical resistance
+                double originalResistance = getMonsterResistance(monster, elementType);
                 double piercePercentage = getElementalPierce(pierceBuild, elementType);
 
                 double piercedResistance = calculatePiercedResistance(originalResistance, piercePercentage);
@@ -89,7 +90,7 @@ public class PierceCalculatorService {
 
                 log.debug(
                         "Physical damage - Base: {}, Armor: {}, Penetration: {}%, Pierce: {}%, Pierced res: {}%, Effective: {}",
-                        damageForThisElement, monster.getArmor(), armorPenetration, piercePercentage,
+                        damageForThisElement, armor, armorPenetration, piercePercentage,
                         piercedResistance, effectiveDamage);
 
             } else {

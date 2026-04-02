@@ -116,9 +116,12 @@ public class CriticalCalculatorService {
             double damageForThisElement = effectiveDamage * elementPercentage;
 
             if ("physical".equalsIgnoreCase(elementType)) {
-                // Apply armor reduction for physical damage
-                double damageAfterArmor = Math.max(0, damageForThisElement - monster.getArmor());
-                totalDamageMultiplier += (damageAfterArmor / effectiveDamage);
+                // Apply armor reduction for physical damage, then physical resistance
+                int armor = monster.getArmor() != null ? monster.getArmor() : 0;
+                double damageAfterArmor = Math.max(0, damageForThisElement - armor);
+                double resistance = getMonsterResistance(monster, elementType);
+                double resistanceMultiplier = resistance / 100.0;
+                totalDamageMultiplier += ((damageAfterArmor * resistanceMultiplier) / effectiveDamage);
             } else {
                 // Apply resistance for elemental damage
                 double resistance = getMonsterResistance(monster, elementType);

@@ -4,6 +4,7 @@ import com.tibia.weeklytasks.dto.calculator.*;
 import com.tibia.weeklytasks.model.Monster;
 import com.tibia.weeklytasks.repository.MonsterRepository;
 import com.tibia.weeklytasks.service.CriticalCalculatorService;
+import com.tibia.weeklytasks.service.MonsterScraperService;
 import com.tibia.weeklytasks.service.MonsterSyncService;
 import com.tibia.weeklytasks.service.PierceCalculatorService;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +30,7 @@ public class DamageCalculatorController {
     private final PierceCalculatorService pierceCalculatorService;
     private final MonsterRepository monsterRepository;
     private final MonsterSyncService monsterSyncService;
+    private final MonsterScraperService monsterScraperService;
 
     @PostMapping("/compare")
     public ResponseEntity<DamageComparisonResponse> compareDamageBuilds(
@@ -397,6 +399,27 @@ public class DamageCalculatorController {
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
             response.put("message", "Error syncing monsters: " + e.getMessage());
+
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+    @PostMapping("/scrape-monsters")
+    public ResponseEntity<Map<String, Object>> scrapeMonsters() {
+        log.info("Manual monster scraping requested from TibiaWiki");
+
+        try {
+            Map<String, Object> result = monsterScraperService.scrapeMonsters();
+
+            log.info("Scraping completed successfully");
+
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("Error during monster scraping", e);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Error scraping monsters: " + e.getMessage());
 
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }

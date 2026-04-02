@@ -31,7 +31,7 @@ public class SessionController {
                     .collect(Collectors.toList());
 
             List<Monster> monsters = monsterRepository.findByNameInIgnoreCase(lowerCaseNames);
-            
+
             // Converter manualmente Monster para MonsterDto simplificado
             List<MonsterDto> monsterDtos = monsters.stream()
                     .map(this::convertToDto)
@@ -51,7 +51,7 @@ public class SessionController {
                 .id(monster.getId())
                 .name(monster.getName())
                 .hitpoints(monster.getHitpoints())
-                .armor(monster.getArmor())
+                .armor(monster.getArmor() != null ? monster.getArmor() : 0)
                 .mitigation(monster.getMitigation() != null ? monster.getMitigation().toString() : "0")
                 .build();
     }
