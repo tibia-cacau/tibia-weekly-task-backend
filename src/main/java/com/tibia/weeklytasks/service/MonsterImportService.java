@@ -93,8 +93,8 @@ public class MonsterImportService {
         if (dto.getResistances() != null) {
             List<MonsterResistance> resistances = dto.getResistances().stream()
                     .map(r -> MonsterResistance.builder()
-                            .elementType(r.getType())
-                            .resistanceValue(r.getValue())
+                            .elementType(r.getElementType())
+                            .resistanceValue(r.getResistanceValue())
                             .build())
                     .collect(Collectors.toList());
             monster.setResistances(resistances);

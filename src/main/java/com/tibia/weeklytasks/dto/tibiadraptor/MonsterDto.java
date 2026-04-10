@@ -73,7 +73,7 @@ public class MonsterDto {
 
     private List<ResistanceDto> resistances;
 
-    @JsonProperty("charm_details")
+    @JsonProperty(" ")
     private CharmDetailsDto charmDetails;
 
     @JsonProperty("user_data")

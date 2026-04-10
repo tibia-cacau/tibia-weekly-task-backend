@@ -25,7 +25,7 @@ public interface MonsterRepository extends JpaRepository<Monster, Long> {
     @Query("SELECT m FROM Monster m WHERE LOWER(m.name) LIKE LOWER(CONCAT('%', :searchTerm, '%'))")
     List<Monster> searchByName(@Param("searchTerm") String searchTerm);
 
-    @Query("SELECT m FROM Monster m WHERE LOWER(m.name) IN :names")
+    @Query("SELECT DISTINCT m FROM Monster m LEFT JOIN FETCH m.resistances WHERE LOWER(m.name) IN :names")
     List<Monster> findByNameInIgnoreCase(@Param("names") List<String> names);
 
     boolean existsByTibiadraptorId(Long tibiadraptorId);

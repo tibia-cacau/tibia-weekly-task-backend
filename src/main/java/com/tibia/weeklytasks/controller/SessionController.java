@@ -1,6 +1,7 @@
 package com.tibia.weeklytasks.controller;
 
 import com.tibia.weeklytasks.dto.tibiadraptor.MonsterDto;
+import com.tibia.weeklytasks.dto.tibiadraptor.ResistanceDto;
 import com.tibia.weeklytasks.model.Monster;
 import com.tibia.weeklytasks.repository.MonsterRepository;
 import lombok.RequiredArgsConstructor;
@@ -8,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -25,14 +27,12 @@ public class SessionController {
         log.info("Fetching monsters by names: {}", monsterNames);
 
         try {
-            // Converter nomes para lowercase para busca case-insensitive
             List<String> lowerCaseNames = monsterNames.stream()
                     .map(String::toLowerCase)
                     .collect(Collectors.toList());
 
             List<Monster> monsters = monsterRepository.findByNameInIgnoreCase(lowerCaseNames);
 
-            // Converter manualmente Monster para MonsterDto simplificado
             List<MonsterDto> monsterDtos = monsters.stream()
                     .map(this::convertToDto)
                     .collect(Collectors.toList());
@@ -47,12 +47,22 @@ public class SessionController {
     }
 
     private MonsterDto convertToDto(Monster monster) {
+        List<ResistanceDto> resistances = monster.getResistances() != null
+                ? monster.getResistances().stream()
+                        .map(r -> ResistanceDto.builder()
+                                .elementType(r.getElementType())
+                                .resistanceValue(r.getResistanceValue())
+                                .build())
+                        .collect(Collectors.toList())
+                : Collections.emptyList();
+
         return MonsterDto.builder()
                 .id(monster.getId())
                 .name(monster.getName())
                 .hitpoints(monster.getHitpoints())
                 .armor(monster.getArmor() != null ? monster.getArmor() : 0)
                 .mitigation(monster.getMitigation() != null ? monster.getMitigation().toString() : "0")
+                .resistances(resistances)
                 .build();
     }
 }
