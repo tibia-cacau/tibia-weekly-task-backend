@@ -163,9 +163,8 @@ public class WeeklyTaskService {
 
                 log.debug("Searching for item: '{}' (cleaned: '{}')", itemName, cleanedItemName);
 
-                // Use exact match to avoid false positives (e.g. "talon" matching "Stampor
-                // Talons")
-                List<Object[]> results = itemRepository.findBasicInfoByNameExactIgnoreCase(cleanedItemName);
+                // Use optimized query with projection (only necessary fields)
+                List<Object[]> results = itemRepository.findBasicInfoByNameContainingIgnoreCase(cleanedItemName);
 
                 if (!results.isEmpty()) {
                     Object[] row = results.get(0);

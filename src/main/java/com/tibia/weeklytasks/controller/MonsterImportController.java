@@ -15,6 +15,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/calculator")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "*")
 public class MonsterImportController {
 
     private final MonsterImportService monsterImportService;

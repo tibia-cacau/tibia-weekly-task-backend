@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/tibia-coins")
+@CrossOrigin(origins = "*")
 public class TibiaCoinController {
 
     private final TibiaCoinService tibiaCoinService;

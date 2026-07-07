@@ -26,9 +26,6 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
     @Query("SELECT i.id, i.name, i.sellTo, i.price FROM Item i WHERE LOWER(i.name) LIKE LOWER(CONCAT('%', :name, '%'))")
     List<Object[]> findBasicInfoByNameContainingIgnoreCase(@Param("name") String name);
 
-    @Query("SELECT i.id, i.name, i.sellTo, i.price FROM Item i WHERE LOWER(i.name) = LOWER(:name)")
-    List<Object[]> findBasicInfoByNameExactIgnoreCase(@Param("name") String name);
-
     @Query("SELECT i FROM Item i WHERE LOWER(i.sellTo) = LOWER(:sellTo)")
     Page<Item> findBySellTo(@Param("sellTo") String sellTo, Pageable pageable);
 

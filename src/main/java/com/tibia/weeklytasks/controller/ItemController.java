@@ -29,6 +29,7 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/items")
 @RequiredArgsConstructor
 @Slf4j
+@CrossOrigin(origins = "${cors.allowed-origins}")
 public class ItemController {
 
     private final ItemImportService itemImportService;
