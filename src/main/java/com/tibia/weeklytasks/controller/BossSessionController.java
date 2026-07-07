@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/boss-sessions")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class BossSessionController {
 
     private static final String ADMIN_TOKEN_HEADER = "X-Admin-Token";

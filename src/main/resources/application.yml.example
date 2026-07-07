@@ -27,11 +27,11 @@ spring:
     jpa:
         hibernate:
             ddl-auto: update
-        show-sql: true
+        show-sql: false
         properties:
             hibernate:
                 dialect: org.hibernate.dialect.MySQL8Dialect
-                format_sql: true
+                format_sql: false
 
 server:
     port: ${PORT}
@@ -53,5 +53,5 @@ tibiadraptor:
 logging:
     level:
         root: INFO
-        com.tibia.weeklytasks: DEBUG
-        org.hibernate.SQL: DEBUG
+        com.tibia.weeklytasks: INFO
+        org.hibernate.SQL: WARN

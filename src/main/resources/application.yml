@@ -16,11 +16,11 @@ spring:
     jpa:
         hibernate:
             ddl-auto: update
-        show-sql: true
+        show-sql: false
         properties:
             hibernate:
                 dialect: org.hibernate.dialect.MySQL8Dialect
-                format_sql: true
+                format_sql: false
 
 server:
     port: ${PORT:8080}
@@ -31,7 +31,7 @@ cors:
 reidoscoins:
     api:
         url: ${REIDOSCOINS_API_URL:https://www.reidoscoins.com.br/index.php}
-        token: ${REIDOSCOINS_API_TOKEN:NBMRJK348THG3W7TRY2GHBV38245YR1291}
+        token: ${REIDOSCOINS_API_TOKEN}
 
 tibiadraptor:
     api:
@@ -41,6 +41,7 @@ tibiadraptor:
 
 logging:
     level:
-        com.tibia: DEBUG
-        org.springframework.orm.jpa: DEBUG
-        org.hibernate.SQL: DEBUG
+        root: INFO
+        com.tibia: INFO
+        org.springframework.orm.jpa: WARN
+        org.hibernate.SQL: WARN

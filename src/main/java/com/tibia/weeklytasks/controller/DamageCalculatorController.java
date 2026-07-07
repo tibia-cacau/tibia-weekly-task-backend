@@ -23,7 +23,6 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/calculator")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class DamageCalculatorController {
 
     private final CriticalCalculatorService criticalCalculatorService;
