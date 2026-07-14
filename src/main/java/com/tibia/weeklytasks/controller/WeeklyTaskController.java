@@ -1,5 +1,7 @@
 package com.tibia.weeklytasks.controller;
 
+import com.tibia.weeklytasks.dto.SessionAnalyserRequest;
+import com.tibia.weeklytasks.dto.SessionAnalyserResponse;
 import com.tibia.weeklytasks.dto.WeeklyTaskRequest;
 import com.tibia.weeklytasks.model.WeeklyTask;
 import com.tibia.weeklytasks.service.WeeklyTaskService;
@@ -10,7 +12,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @RestController
@@ -27,7 +31,7 @@ public class WeeklyTaskController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<WeeklyTask> getTaskById(@PathVariable String id) {
+    public ResponseEntity<WeeklyTask> getTaskById(@PathVariable Long id) {
         log.info("GET /api/tasks/{} - Fetching task", id);
         return taskService.getTaskById(id)
                 .map(ResponseEntity::ok)
@@ -55,7 +59,7 @@ public class WeeklyTaskController {
 
     @PutMapping("/{id}")
     public ResponseEntity<WeeklyTask> updateTask(
-            @PathVariable String id,
+            @PathVariable Long id,
             @Valid @RequestBody WeeklyTaskRequest request) {
         log.info("PUT /api/tasks/{} - Updating task", id);
         try {
@@ -67,9 +71,34 @@ public class WeeklyTaskController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteTask(@PathVariable String id) {
+    public ResponseEntity<Void> deleteTask(@PathVariable Long id) {
         log.info("DELETE /api/tasks/{} - Deleting task", id);
         taskService.deleteTask(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<List<WeeklyTask>> searchTasks(@RequestParam String q) {
+        log.info("GET /api/tasks/search?q={} - Searching tasks", q);
+        return ResponseEntity.ok(taskService.searchTasks(q));
+    }
+
+    @PostMapping("/analyze-session")
+    public ResponseEntity<SessionAnalyserResponse> analyzeSession(
+            @Valid @RequestBody SessionAnalyserRequest request) {
+        log.info("POST /api/tasks/analyze-session - Analyzing session with {} monsters and {} looted items",
+                request.getMonsterNames().size(),
+                request.getLootedItems() != null ? request.getLootedItems().size() : 0);
+
+        // Create a map to track kill counts (can be enhanced later to accept kill
+        // counts from frontend)
+        Map<String, Integer> killCounts = new HashMap<>();
+        request.getMonsterNames().forEach(name -> killCounts.put(name, 0));
+
+        SessionAnalyserResponse response = taskService.analyzeSession(
+                request.getMonsterNames(),
+                killCounts,
+                request.getLootedItems());
+        return ResponseEntity.ok(response);
     }
 }

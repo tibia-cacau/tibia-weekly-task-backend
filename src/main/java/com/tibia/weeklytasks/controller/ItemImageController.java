@@ -22,7 +22,7 @@ public class ItemImageController {
     private final ItemRepository itemRepository;
 
     @GetMapping("/{id}/image")
-    public ResponseEntity<byte[]> getItemImage(@PathVariable String id) {
+    public ResponseEntity<byte[]> getItemImage(@PathVariable Long id) {
         log.info("GET /api/items/{}/image - Fetching item image", id);
 
         Optional<Item> itemOpt = itemRepository.findById(id);

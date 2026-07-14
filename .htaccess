@@ -1,0 +1,31 @@
+# Proxy reverso para Spring Boot rodando na porta 8080
+RewriteEngine On
+
+# Habilitar módulo proxy (necessário para KingHost)
+# Certifique-se que mod_proxy e mod_proxy_http estão habilitados
+
+# Se a requisição for para /api, redireciona para localhost:8080
+RewriteCond %{REQUEST_URI} ^/api/
+RewriteRule ^api/(.*)$ http://localhost:8080/api/$1 [P,L]
+
+# Angular routing - reescrever para index.html (fix F5)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_URI} ^/weekly-tasks/
+RewriteRule ^weekly-tasks/(.*)$ /weekly-tasks/index.html [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_URI} ^/comparador/
+RewriteRule ^comparador/(.*)$ /comparador/index.html [L]
+
+# Headers CORS
+<IfModule mod_headers.c>
+    Header set Access-Control-Allow-Origin "*"
+    Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+    Header set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
+    
+    # Handle preflight OPTIONS requests
+    RewriteCond %{REQUEST_METHOD} OPTIONS
+    RewriteRule ^(.*)$ $1 [R=200,L]
+</IfModule>

@@ -17,30 +17,32 @@ public class WeeklyTaskRequest {
 
     @NotBlank(message = "Task type is required")
     private String taskType;
-    
+
     @NotBlank(message = "Name is required")
     private String name;
-    
+
     private String itemName;
-    
+
     private Integer itemQuantity;
-    
+
+    private String imageUrl;
+
     private String monsterName;
-    
+
     private Integer killCount;
-    
+
     private String location;
-    
+
     @NotNull(message = "Difficulty is required")
     private Integer difficulty;
-    
+
     private Integer estimatedTime;
-    
+
     private String rewardType;
-    
+
     private Integer rewardAmount;
-    
+
     private List<String> requirements;
-    
+
     private String notes;
 }
